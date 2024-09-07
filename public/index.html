@@ -5,21 +5,323 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monkey Jumping App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline';">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            height: 100%;
+            background-color: #f0f0f0;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-width: 414px;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .header-left, .header-right {
+            display: flex;
+            flex-direction: column;
+        }
+        .header-left span:first-child, .header-right span:first-child {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+        .header-left span:last-child, .header-right span:last-child {
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        main {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+        nav {
+            display: flex;
+            justify-content: space-around;
+            background-color: #ffffff;
+            padding: 10px 0;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+        .nav-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+        .nav-button:hover, .nav-button.active {
+            color: #4CAF50;
+        }
+        .nav-button i {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .page {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .button:hover {
+            background-color: #45a049;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <h1>Monkey Jumping App</h1>
     <div id="app">
-        <div id="content">
-            <img id="monkey" src="monkey.png" alt="Monkey">
-        </div>
-        <div id="buttons">
-            <button id="main-menu">Main Menu</button>
-            <button id="level-up">Level Up Monkey</button>
-            <button id="upgrade-bike">Upgrade Bike</button>
-        </div>
+        <header>
+            <div class="header-left">
+                <span>Monkey</span>
+                <span>Jumping</span>
+            </div>
+            <div class="header-right">
+                <span>Bananas</span>
+                <span id="bananas">0</span>
+            </div>
+        </header>
+        <main id="content">
+            <!-- Content will be dynamically inserted here -->
+        </main>
+        <nav>
+            <a href="#" class="nav-button" data-page="1">
+                <i>🐒</i>
+                <span>Profile</span>
+            </a>
+            <a href="#" class="nav-button" data-page="2">
+                <i>🎮</i>
+                <span>Game</span>
+            </a>
+            <a href="#" class="nav-button" data-page="3">
+                <i>⬆️</i>
+                <span>Upgrade</span>
+            </a>
+            <a href="#" class="nav-button" data-page="4">
+                <i>⚙️</i>
+                <span>Settings</span>
+            </a>
+        </nav>
     </div>
-    <script src="app.js"></script>
+    <div class="overlay" id="overlay"></div>
+    <div class="popup" id="popup">
+        <p id="popupMessage"></p>
+        <button class="button" onclick="closePopup()">OK</button>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const content = document.getElementById('content');
+            const navButtons = document.querySelectorAll('.nav-button');
+            let bananas = 0;
+            let lastDailyBonus = 0;
+            let stats = {
+                jumpingPower: 5,
+                stamina: 10,
+                tricksLearned: 2
+            };
+
+            function updateBananas(amount) {
+                bananas = Math.max(0, bananas + amount);
+                document.getElementById('bananas').textContent = bananas;
+            }
+
+            function showPopup(message) {
+                document.getElementById('popupMessage').textContent = message;
+                document.getElementById('popup').style.display = 'block';
+                document.getElementById('overlay').style.display = 'block';
+            }
+
+            window.closePopup = function() {
+                document.getElementById('popup').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            }
+
+            function loadPage(pageNumber) {
+                navButtons.forEach(btn => btn.classList.remove('active'));
+                navButtons[pageNumber - 1].classList.add('active');
+
+                switch(pageNumber) {
+                    case 1:
+                        content.innerHTML = `
+                            <div class="page">
+                                <h2>Monkey Profile</h2>
+                                <div class="stat">
+                                    <span>Jumping Power:</span>
+                                    <span>${stats.jumpingPower}</span>
+                                </div>
+                                <div class="stat">
+                                    <span>Stamina:</span>
+                                    <span>${stats.stamina}</span>
+                                </div>
+                                <div class="stat">
+                                    <span>Tricks Learned:</span>
+                                    <span>${stats.tricksLearned}</span>
+                                </div>
+                                <button class="button" id="dailyBonusBtn">Collect Daily Bonus</button>
+                            </div>
+                        `;
+                        document.getElementById('dailyBonusBtn').addEventListener('click', collectDailyBonus);
+                        break;
+                    case 2:
+                        content.innerHTML = `
+                            <div class="page">
+                                <h2>Monkey Jumping Game</h2>
+                                <p>Jump as high as you can and collect bananas!</p>
+                                <button class="button" id="startGame">Start Game</button>
+                                <div id="gameArea" style="display:none;">
+                                    <p>Game in progress... Jump, monkey, jump!</p>
+                                    <button class="button" onclick="updateBananas(5)">Collect Banana</button>
+                                </div>
+                            </div>
+                        `;
+                        document.getElementById('startGame').addEventListener('click', function() {
+                            this.style.display = 'none';
+                            document.getElementById('gameArea').style.display = 'block';
+                        });
+                        break;
+                    case 3:
+                        content.innerHTML = `
+                            <div class="page">
+                                <h2>Upgrade Your Monkey</h2>
+                                <p>Improve your monkey's abilities:</p>
+                                <button class="button" onclick="upgrade('jumpingPower', 20)">Upgrade Jumping Power (Cost: 20 Bananas)</button>
+                                <button class="button" onclick="upgrade('stamina', 30)">Increase Stamina (Cost: 30 Bananas)</button>
+                                <button class="button" onclick="upgrade('tricksLearned', 50)">Learn New Trick (Cost: 50 Bananas)</button>
+                            </div>
+                        `;
+                        break;
+                    case 4:
+                        content.innerHTML = `
+                            <div class="page">
+                                <h2>Settings</h2>
+                                <p>Customize your Monkey Jumping experience:</p>
+                                <div class="stat">
+                                    <span>Sound Effects</span>
+                                    <input type="checkbox" id="soundEffects">
+                                </div>
+                                <div class="stat">
+                                    <span>Background Music</span>
+                                    <input type="checkbox" id="backgroundMusic">
+                                </div>
+                                <div class="stat">
+                                    <span>Notifications</span>
+                                    <input type="checkbox" id="notifications">
+                                </div>
+                                <button class="button" onclick="saveSettings()">Save Settings</button>
+                            </div>
+                        `;
+                        break;
+                }
+            }
+
+            function collectDailyBonus() {
+                const now = Date.now();
+                if (now - lastDailyBonus >= 24 * 60 * 60 * 1000) {
+                    updateBananas(10);
+                    lastDailyBonus = now;
+                    showPopup("Daily bonus collected: +10 Bananas!");
+                } else {
+                    const timeLeft = 24 - Math.floor((now - lastDailyBonus) / (60 * 60 * 1000));
+                    showPopup(`You can collect your next daily bonus in ${timeLeft} hours.`);
+                }
+            }
+
+            function upgrade(stat, cost) {
+                if (bananas >= cost) {
+                    updateBananas(-cost);
+                    stats[stat]++;
+                    showPopup(`Upgrade successful! ${stat} increased to ${stats[stat]}.`);
+                    loadPage(3); // Reload the upgrade page to reflect new stats
+                } else {
+                    showPopup(`Not enough bananas! You need ${cost - bananas} more.`);
+                }
+            }
+
+            function saveSettings() {
+                // In a real app, you'd save these settings to a server or local storage
+                showPopup("Settings saved successfully!");
+            }
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const pageNumber = parseInt(this.getAttribute('data-page'));
+                    loadPage(pageNumber);
+                });
+            });
+
+            // Load the first page by default
+            loadPage(1);
+
+            // Expose functions to window for button onclick events
+            window.updateBananas = updateBananas;
+            window.upgrade = upgrade;
+            window.saveSettings = saveSettings;
+        });
+    </script>
 </body>
 </html>
